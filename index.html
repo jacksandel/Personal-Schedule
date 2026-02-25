@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Schedule Gantt</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── CONFIGURATION ─────────────────────────────────────────────
+       Your Apps Script URL and token live here.
+       Replace the two placeholder values below.
+    ─────────────────────────────────────────────────────────────── */
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --border:    #2a2d3a;
+      --text:      #e8eaf0;
+      --muted:     #6b7080;
+      --accent:    #4f8ef7;
+      --today:     rgba(79,142,247,.15);
+      --row-h:     44px;
+      --header-h:  56px;
+      --label-w:   260px;
+      --cell-w:    48px;
+      --radius:    6px;
+      --font-main: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── TOP BAR ───────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 58px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      color: var(--text);
+    }
+    #status {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #3ecf8e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: .3; }
+    }
+
+    /* ── CONTROLS ──────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .controls label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+    .controls input[type="date"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .btn:hover { border-color: var(--accent); background: rgba(79,142,247,.08); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+    .btn.primary:hover { background: #3a7de8; }
+
+    /* category filter pills */
+    #cat-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+    .pill {
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: opacity .15s, border-color .15s;
+      opacity: .5;
+    }
+    .pill.active { opacity: 1; border-color: rgba(255,255,255,.25); }
+
+    /* ── GANTT WRAPPER ─────────────────────────────────────────── */
+    #gantt-wrap {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    /* ── GANTT TABLE ───────────────────────────────────────────── */
+    #gantt {
+      display: grid;
+      min-width: max-content;
+    }
+
+    /* sticky left label column */
+    .g-label {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: var(--bg);
+      width: var(--label-w);
+      min-width: var(--label-w);
+      border-right: 1px solid var(--border);
+    }
+
+    /* header row */
+    .g-header-row {
+      display: contents;
+    }
+    .g-header-label {
+      position: sticky; top: 0; left: 0; z-index: 5;
+      background: var(--surface);
+      height: var(--header-h);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 16px;
+      font-size: 11px; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .g-header-dates {
+      display: flex;
+      position: sticky; top: 0; z-index: 4;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: var(--header-h);
+    }
+    .g-day-header {
+      width: var(--cell-w);
+      min-width: var(--cell-w);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border-right: 1px solid var(--border);
+      gap: 2px;
+    }
+    .g-day-header .dow {
+      font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+    }
+    .g-day-header .dom {
+      font-size: 15px; font-weight: 600; font-family: var(--font-mono);
+    }
+    .g-day-header.today { background: var(--today); }
+    .g-day-header.today .dom { color: var(--accent); }
+
+    /* event rows */
+    .g-row {
+      display: contents;
+    }
+    .g-row-label {
+      position: sticky; left: 0; z-index: 2;
+      background: var(--bg);
+      height: var(--row-h);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 16px;
+      gap: 10px;
+      cursor: default;
+    }
+    .g-row-label:hover { background: var(--surface); }
+    .cat-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .g-event-name {
+      font-size: 13px; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 190px;
+    }
+    .g-event-loc {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    .g-row-cells {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      height: var(--row-h);
+      position: relative;
+    }
+    .g-cell {
+      width: var(--cell-w);
+      min-width: var(--cell-w);
+      border-right: 1px solid var(--border);
+      height: 100%;
+    }
+    .g-cell.today { background: var(--today); }
+    .g-cell.weekend { background: rgba(255,255,255,.015); }
+
+    /* the bar */
+    .g-bar {
+      position: absolute;
+      top: 7px; bottom: 7px;
+      border-radius: 4px;
+      display: flex; align-items: center;
+      padding: 0 8px;
+      font-size: 11px; font-weight: 500;
+      white-space: nowrap; overflow: hidden;
+      cursor: pointer;
+      transition: filter .15s, transform .1s;
+      z-index: 1;
+    }
+    .g-bar:hover { filter: brightness(1.2); transform: scaleY(1.06); z-index: 2; }
+
+    /* ── TOOLTIP ───────────────────────────────────────────────── */
+    #tooltip {
+      position: fixed;
+      background: #22263a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      max-width: 260px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s;
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      line-height: 1.6;
+    }
+    #tooltip.visible { opacity: 1; }
+    #tooltip .tt-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+    #tooltip .tt-row { color: var(--muted); font-size: 12px; }
+    #tooltip .tt-row span { color: var(--text); }
+
+    /* ── EMPTY / ERROR STATES ──────────────────────────────────── */
+    #message {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      flex: 1; gap: 12px;
+      color: var(--muted); font-size: 14px; text-align: center; padding: 40px;
+    }
+    #message .big { font-size: 36px; }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CONFIGURATION  ← Edit these two lines
+══════════════════════════════════════════════════════════════ -->
+<script>
+  const SCRIPT_URL  = "Phttps://script.googleusercontent.com/macros/echo?user_content_key=AY5xjrSZ728R_i3YK68Rf83BLE9AZu_arorgljQP6jiRUO_lZbAQZY3GqkaZq_qK5pPw2hVO2POAjSuhAMZGLTyFgECdjuWHtFdyEWTSE1B9PL6RFDmRB3FfcfnGLXpDqh5Iz2pCDojjtwXY_U4jZOu9Vdx_z42bGAAo_wuo467E7nKJy_lMwKrSmVr9NyKT7VOm_bFfZJiu9GQ_dgRzwWEcQ2tByjHVUlDR1tM3INRFbt_J8CriTkHNgg1ACWRqdxJ-Oejp5gHS5onBLXDY8rYRcNjBTCmkHG7qZ64L1vmhBeR7qc1EVTF9JmKXLIwJFg&lib=M07NChI2pVXh9RmI8KcTE83JKJYKqvPvw/exec";  
+
+  const SECRET_TOKEN = "jsschedule";    
+ // must match what's in Apps Script
+</script>
+<!-- ══════════════════════════════════════════════════════════════ -->
+
+<header>
+  <h1>📅 Schedule</h1>
+  <div id="status"><div id="dot"></div><span id="status-text">Connecting…</span></div>
+</header>
+
+<div class="controls">
+  <label>From</label>
+  <input type="date" id="date-from"/>
+  <label>To</label>
+  <input type="date" id="date-to"/>
+  <button class="btn" onclick="shiftRange(-7)">◀ Week</button>
+  <button class="btn" onclick="shiftRange(7)">Week ▶</button>
+  <button class="btn primary" onclick="goToday()">Today</button>
+  <div id="cat-filters"></div>
+</div>
+
+<div id="gantt-wrap">
+  <div id="message"><div class="big">⏳</div>Loading your schedule…</div>
+  <div id="gantt" style="display:none"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ── CATEGORY COLORS ─────────────────────────────────────────────
+// Add or rename categories here. Any category not listed gets auto-assigned a color.
+const CATEGORY_COLORS = {
+  "Internal":  { bg: "#2563eb", text: "#fff" },
+  "External":  { bg: "#059669", text: "#fff" },
+  "Personal":  { bg: "#7c3aed", text: "#fff" },
+  "Travel":    { bg: "#d97706", text: "#fff" },
+  "Deadline":  { bg: "#dc2626", text: "#fff" },
+};
+const AUTO_COLORS = ["#0e7490","#be185d","#15803d","#b45309","#6d28d9","#0f766e","#9333ea"];
+let autoIdx = 0;
+function categoryColor(cat) {
+  if (!cat) return { bg: "#4b5563", text: "#fff" };
+  if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
+  // auto-assign
+  if (!CATEGORY_COLORS[cat]) {
+    CATEGORY_COLORS[cat] = { bg: AUTO_COLORS[autoIdx % AUTO_COLORS.length], text: "#fff" };
+    autoIdx++;
+  }
+  return CATEGORY_COLORS[cat];
+}
+
+// ── STATE ───────────────────────────────────────────────────────
+let allEvents      = [];
+let activeCategories = new Set();
+let rangeStart, rangeEnd;
+let lastJSON       = "";
+let POLL_MS        = 10000; // refresh every 10 seconds
+
+// ── DATE HELPERS ─────────────────────────────────────────────────
+function parseDate(str) {
+  // Handles M/D/YYYY, MM/DD/YYYY, and JS Date objects
+  if (!str) return null;
+  if (str instanceof Date) return new Date(str.getFullYear(), str.getMonth(), str.getDate());
+  const s = String(str).trim();
+  const parts = s.split("/");
+  if (parts.length === 3) {
+    return new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+  }
+  return null;
+}
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r;
+}
+function isSameDay(a, b) {
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function toInputVal(d) {
+  return d.toISOString().slice(0,10);
+}
+function datesBetween(s, e) {
+  const out = []; let c = new Date(s);
+  while (c <= e) { out.push(new Date(c)); c = addDays(c,1); }
+  return out;
+}
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+// ── RANGE CONTROLS ───────────────────────────────────────────────
+function initRange() {
+  const today = new Date();
+  rangeStart = addDays(today, -3);
+  rangeEnd   = addDays(today, 18);
+  document.getElementById("date-from").value = toInputVal(rangeStart);
+  document.getElementById("date-to").value   = toInputVal(rangeEnd);
+}
+function readRange() {
+  rangeStart = new Date(document.getElementById("date-from").value + "T00:00:00");
+  rangeEnd   = new Date(document.getElementById("date-to").value   + "T00:00:00");
+}
+function shiftRange(days) {
+  readRange();
+  rangeStart = addDays(rangeStart, days);
+  rangeEnd   = addDays(rangeEnd,   days);
+  document.getElementById("date-from").value = toInputVal(rangeStart);
+  document.getElementById("date-to").value   = toInputVal(rangeEnd);
+  render();
+}
+function goToday() {
+  initRange(); render();
+}
+document.getElementById("date-from").addEventListener("change", () => { readRange(); render(); });
+document.getElementById("date-to").addEventListener("change",   () => { readRange(); render(); });
+
+// ── FETCH DATA ───────────────────────────────────────────────────
+async function fetchData() {
+  try {
+    const url = `${SCRIPT_URL}?token=${encodeURIComponent(SECRET_TOKEN)}`;
+    const res  = await fetch(url);
+    const json = await res.text();
+
+    if (json === lastJSON) return; // nothing changed
+    lastJSON = json;
+
+    const data = JSON.parse(json);
+    if (data.error) { setStatus("error", "Auth failed — check token"); return; }
+
+    allEvents = data.map(row => ({
+      name:     row["Event"]    || row["event"]    || "",
+      category: row["Category"] || row["category"] || "",
+      location: row["Location"] || row["location"] || "",
+      notes:    row["Notes"]    || row["notes"]    || "",
+      start:    parseDate(row["Start"] || row["start"]),
+      end:      parseDate(row["End"]   || row["end"]),
+    })).filter(e => e.start && e.end && e.name);
+
+    // build category list
+    const cats = [...new Set(allEvents.map(e => e.category).filter(Boolean))];
+    if (activeCategories.size === 0) cats.forEach(c => activeCategories.add(c));
+    buildCatFilters(cats);
+
+    render();
+    setStatus("ok", `Updated ${new Date().toLocaleTimeString()}`);
+  } catch(err) {
+    setStatus("error", "Fetch error — check URL");
+    console.error(err);
+  }
+}
+
+function setStatus(type, msg) {
+  document.getElementById("status-text").textContent = msg;
+  document.getElementById("dot").style.background =
+    type === "ok" ? "#3ecf8e" : type === "error" ? "#ef4444" : "#f59e0b";
+}
+
+// ── CATEGORY FILTER PILLS ─────────────────────────────────────────
+function buildCatFilters(cats) {
+  const wrap = document.getElementById("cat-filters");
+  wrap.innerHTML = "";
+  cats.forEach(cat => {
+    const col = categoryColor(cat);
+    const pill = document.createElement("div");
+    pill.className = "pill" + (activeCategories.has(cat) ? " active" : "");
+    pill.textContent = cat;
+    pill.style.background = col.bg + "33";
+    pill.style.color       = col.bg;
+    pill.style.borderColor = activeCategories.has(cat) ? col.bg : "transparent";
+    pill.addEventListener("click", () => {
+      if (activeCategories.has(cat)) activeCategories.delete(cat);
+      else activeCategories.add(cat);
+      buildCatFilters(cats);
+      render();
+    });
+    wrap.appendChild(pill);
+  });
+}
+
+// ── RENDER GANTT ──────────────────────────────────────────────────
+function render() {
+  readRange();
+  const gantt = document.getElementById("gantt");
+  const msg   = document.getElementById("message");
+  const days  = datesBetween(rangeStart, rangeEnd);
+  const today = new Date();
+
+  // filter events
+  const events = allEvents.filter(e =>
+    activeCategories.has(e.category) &&
+    e.start <= rangeEnd &&
+    e.end   >= rangeStart
+  );
+
+  if (events.length === 0) {
+    gantt.style.display = "none";
+    msg.style.display   = "flex";
+    msg.innerHTML = `<div class="big">📭</div>No events in this date range.<br/>Try adjusting the dates above.`;
+    return;
+  }
+
+  gantt.style.display = "grid";
+  msg.style.display   = "none";
+  gantt.innerHTML     = "";
+
+  // set grid columns: label + one per day
+  gantt.style.gridTemplateColumns = `var(--label-w) repeat(${days.length}, var(--cell-w))`;
+
+  // ── HEADER ──
+  const hLabel = document.createElement("div");
+  hLabel.className = "g-header-label";
+  hLabel.textContent = "EVENT";
+  gantt.appendChild(hLabel);
+
+  const hDates = document.createElement("div");
+  hDates.className = "g-header-dates";
+  hDates.style.gridColumn = `2 / span ${days.length}`;
+  days.forEach(d => {
+    const cell = document.createElement("div");
+    cell.className = "g-day-header" + (isSameDay(d, today) ? " today" : "");
+    cell.innerHTML = `<span class="dow">${DOW[d.getDay()]}</span><span class="dom">${d.getDate()}</span>`;
+    hDates.appendChild(cell);
+  });
+  gantt.appendChild(hDates);
+
+  // ── ROWS ──
+  events.forEach(ev => {
+    const col = categoryColor(ev.category);
+
+    // label cell
+    const label = document.createElement("div");
+    label.className = "g-row-label";
+    label.innerHTML = `
+      <div class="cat-dot" style="background:${col.bg}"></div>
+      <div>
+        <div class="g-event-name">${ev.name}</div>
+        <div class="g-event-loc">${ev.location}</div>
+      </div>`;
+    gantt.appendChild(label);
+
+    // cells + bar
+    const rowCells = document.createElement("div");
+    rowCells.className = "g-row-cells";
+    rowCells.style.gridColumn = `2 / span ${days.length}`;
+
+    days.forEach((d, idx) => {
+      const cell = document.createElement("div");
+      const isToday   = isSameDay(d, today);
+      const isWeekend = d.getDay()===0 || d.getDay()===6;
+      cell.className = "g-cell" + (isToday ? " today" : isWeekend ? " weekend" : "");
+      rowCells.appendChild(cell);
+    });
+
+    // calculate bar position
+    const clampedStart = ev.start < rangeStart ? rangeStart : ev.start;
+    const clampedEnd   = ev.end   > rangeEnd   ? rangeEnd   : ev.end;
+    const startIdx = days.findIndex(d => isSameDay(d, clampedStart));
+    const endIdx   = days.findIndex(d => isSameDay(d, clampedEnd));
+    const si = startIdx === -1 ? 0 : startIdx;
+    const ei = endIdx   === -1 ? days.length - 1 : endIdx;
+    const cellW = 48; // matches --cell-w
+    const barLeft  = si * cellW + 4;
+    const barWidth = (ei - si + 1) * cellW - 8;
+
+    const bar = document.createElement("div");
+    bar.className = "g-bar";
+    bar.style.left       = barLeft  + "px";
+    bar.style.width      = barWidth + "px";
+    bar.style.background = col.bg;
+    bar.style.color      = col.text;
+    bar.textContent      = barWidth > 60 ? ev.name : "";
+
+    // tooltip
+    bar.addEventListener("mouseenter", e => showTooltip(e, ev, col));
+    bar.addEventListener("mousemove",  e => moveTooltip(e));
+    bar.addEventListener("mouseleave", hideTooltip);
+
+    rowCells.appendChild(bar);
+    gantt.appendChild(rowCells);
+  });
+}
+
+// ── TOOLTIP ───────────────────────────────────────────────────────
+const tt = document.getElementById("tooltip");
+function showTooltip(e, ev, col) {
+  const fmt = d => d ? d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+  tt.innerHTML = `
+    <div class="tt-title" style="color:${col.bg}">${ev.name}</div>
+    <div class="tt-row">📍 <span>${ev.location || "—"}</span></div>
+    <div class="tt-row">🗓 <span>${fmt(ev.start)}${!isSameDay(ev.start,ev.end) ? " → " + fmt(ev.end) : ""}</span></div>
+    <div class="tt-row">🏷 <span>${ev.category || "—"}</span></div>
+    ${ev.notes ? `<div class="tt-row">📝 <span>${ev.notes}</span></div>` : ""}
+  `;
+  tt.classList.add("visible");
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const x = e.clientX + 14, y = e.clientY + 14;
+  tt.style.left = Math.min(x, window.innerWidth  - 280) + "px";
+  tt.style.top  = Math.min(y, window.innerHeight - 160) + "px";
+}
+function hideTooltip() { tt.classList.remove("visible"); }
+
+// ── INIT ──────────────────────────────────────────────────────────
+initRange();
+fetchData();
+setInterval(fetchData, POLL_MS);
+</script>
+</body>
+</html>
