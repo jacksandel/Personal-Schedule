@@ -267,25 +267,28 @@ function parseDate(str) {
 }
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function isSameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
-function toInputVal(d){ return d.toISOString().slice(0,10); }
-function datesBetween(s,e){ const o=[]; let c=new Date(s); while(c<=e){o.push(new Date(c));c=addDays(c,1);} return o; }
-const DOW    = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-
-// ── RANGE ─────────────────────────────────────────────────────────
-function initRange(){
-  const t = new Date();
-  rangeStart = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-  rangeEnd   = new Date(t.getFullYear()+1, t.getMonth(), t.getDate());
-  document.getElementById("date-from").value = toInputVal(rangeStart);
-  document.getElementById("date-to").value   = toInputVal(rangeEnd);
+function toInputVal(d){
+  // Use local date parts to avoid UTC timezone shift
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
 }
-function readRange(){
-  rangeStart = new Date(document.getElementById("date-from").value+"T00:00:00");
-  rangeEnd   = new Date(document.getElementById("date-to").value  +"T00:00:00");
+function goToday(){
+  initRange();
+  render();
+  // After render, scroll horizontally to today's position
+  const wrap  = document.getElementById("gantt-wrap");
+  const days  = datesBetween(rangeStart, rangeEnd);
+  const today = new Date();
+  const idx   = days.findIndex(d => isSameDay(d, today));
+  if (idx !== -1) {
+    const cellW   = 48;
+    const labelW  = 260;
+    const visibleW = wrap.clientWidth - labelW;
+    wrap.scrollTo({ left: Math.max(0, labelW + idx * cellW - visibleW / 2), behavior: "smooth" });
+  }
 }
-function shiftRange(days){ readRange(); rangeStart=addDays(rangeStart,days); rangeEnd=addDays(rangeEnd,days); document.getElementById("date-from").value=toInputVal(rangeStart); document.getElementById("date-to").value=toInputVal(rangeEnd); render(); }
-function goToday(){ initRange(); render(); }
 document.getElementById("date-from").addEventListener("change",()=>{readRange();render();});
 document.getElementById("date-to").addEventListener("change",  ()=>{readRange();render();});
 
