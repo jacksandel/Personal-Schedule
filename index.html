@@ -110,7 +110,7 @@
      CONFIGURATION — replace both values below
 ══════════════════════════════════════════════ -->
 <script>
-  const SECRET_TOKEN = "jsschedule";  
+const SECRET_TOKEN = "jsschedule";  
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
 </script>
 <!-- ══════════════════════════════════════════════ -->
@@ -247,17 +247,19 @@ function shiftRange(days) {
 function goToday() {
   initRange();
   render();
-  // Scroll chart to center today horizontally
-  setTimeout(() => {
-    const wrap  = document.getElementById("gantt-wrap");
-    const days  = datesBetween(rangeStart, rangeEnd);
-    const today = new Date();
-    const idx   = days.findIndex(d => isSameDay(d, today));
-    if (idx !== -1) {
+  // Use requestAnimationFrame to wait for DOM paint before scrolling
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const wrap   = document.getElementById("gantt-wrap");
+      const days   = datesBetween(rangeStart, rangeEnd);
+      const today  = new Date();
+      const idx    = days.findIndex(d => isSameDay(d, today));
+      if (idx === -1) return;
       const visibleW = wrap.clientWidth - LABEL_W;
-      wrap.scrollTo({ left: Math.max(0, LABEL_W + idx * CELL_W - visibleW / 2), behavior:"smooth" });
-    }
-  }, 50);
+      wrap.scrollTo({ left: Math.max(0, LABEL_W + idx * CELL_W - visibleW / 2), behavior: "smooth" });
+      wrap.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 }
 
 document.getElementById("date-from").addEventListener("change", () => { readRange(); render(); });
