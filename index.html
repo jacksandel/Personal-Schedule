@@ -198,8 +198,9 @@
      CONFIGURATION  ← Replace both values below
 ══════════════════════════════════════════════════════════════ -->
 <script>
-const SECRET_TOKEN = "jsschedule";  
+  const SECRET_TOKEN = "jsschedule";  
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
+
 </script>
 <!-- ══════════════════════════════════════════════════════════════ -->
 
@@ -274,17 +275,34 @@ function toInputVal(d){
   const day = String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${day}`;
 }
+function datesBetween(s,e){ const o=[]; let c=new Date(s); while(c<=e){o.push(new Date(c));c=addDays(c,1);} return o; }
+const DOW    = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ── RANGE ─────────────────────────────────────────────────────────
+function initRange(){
+  const t = new Date();
+  rangeStart = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  rangeEnd   = new Date(t.getFullYear()+1, t.getMonth(), t.getDate());
+  document.getElementById("date-from").value = toInputVal(rangeStart);
+  document.getElementById("date-to").value   = toInputVal(rangeEnd);
+}
+function readRange(){
+  rangeStart = new Date(document.getElementById("date-from").value+"T00:00:00");
+  rangeEnd   = new Date(document.getElementById("date-to").value  +"T00:00:00");
+}
+function shiftRange(days){ readRange(); rangeStart=addDays(rangeStart,days); rangeEnd=addDays(rangeEnd,days); document.getElementById("date-from").value=toInputVal(rangeStart); document.getElementById("date-to").value=toInputVal(rangeEnd); render(); }
 function goToday(){
   initRange();
   render();
-  // After render, scroll horizontally to today's position
-  const wrap  = document.getElementById("gantt-wrap");
-  const days  = datesBetween(rangeStart, rangeEnd);
-  const today = new Date();
-  const idx   = days.findIndex(d => isSameDay(d, today));
+  // Scroll horizontally to center today in the viewport
+  const wrap   = document.getElementById("gantt-wrap");
+  const days   = datesBetween(rangeStart, rangeEnd);
+  const today  = new Date();
+  const idx    = days.findIndex(d => isSameDay(d, today));
   if (idx !== -1) {
-    const cellW   = 48;
-    const labelW  = 260;
+    const cellW    = 48;
+    const labelW   = 260;
     const visibleW = wrap.clientWidth - labelW;
     wrap.scrollTo({ left: Math.max(0, labelW + idx * cellW - visibleW / 2), behavior: "smooth" });
   }
