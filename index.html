@@ -23,12 +23,11 @@
       --cell-w:     48px;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-
-    html, body { height:100%; }
+    html, body { height:100%; overflow:hidden; }
     body {
       background:var(--bg); color:var(--text);
       font-family:'DM Sans',sans-serif; font-size:14px;
-      display:flex; flex-direction:column; overflow:hidden;
+      display:flex; flex-direction:column;
     }
 
     /* ── TOP BAR ── */
@@ -52,11 +51,7 @@
       background:var(--surface); border:1px solid var(--border); color:var(--text);
       border-radius:6px; padding:5px 10px; font-family:'DM Mono',monospace; font-size:12px;
     }
-    .btn {
-      background:var(--surface); border:1px solid var(--border); color:var(--text);
-      border-radius:6px; padding:5px 14px; font-size:12px; cursor:pointer;
-      transition:border-color .15s,background .15s;
-    }
+    .btn { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 14px; font-size:12px; cursor:pointer; transition:border-color .15s,background .15s; }
     .btn:hover { border-color:var(--accent); background:rgba(79,142,247,.08); }
     .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:500; }
     .btn.primary:hover { background:#3a7de8; }
@@ -64,60 +59,88 @@
     .pill { border-radius:999px; padding:3px 11px; font-size:11px; font-weight:500; cursor:pointer; border:1.5px solid transparent; opacity:.45; transition:opacity .15s; }
     .pill.active { opacity:1; }
 
-    /* ══════════════════════════════════════════════
-       MAIN LAYOUT
-       ┌─────────────┬──────────────────────────────┐
-       │  corner     │  header scroll (x only)       │
-       ├─────────────┼──────────────────────────────┤
-       │  label col  │  body scroll (x+y)            │
-       │  (y scroll) │                               │
-       └─────────────┴──────────────────────────────┘
-    ══════════════════════════════════════════════ */
-    #gantt-outer {
+    /* ── GANTT SCROLL CONTAINER ──
+       Single scrollable div. Everything inside uses
+       position:sticky to freeze the header rows and label column.
+    ── */
+    #gantt-wrap {
       flex:1; min-height:0;
-      display:grid;
-      grid-template-columns: var(--label-w) 1fr;
-      grid-template-rows: calc(var(--month-h) + var(--header-h)) 1fr;
-      overflow:hidden;
+      overflow:auto;
+      position:relative;
     }
 
-    /* top-left corner (frozen) */
-    #corner {
-      grid-column:1; grid-row:1;
+    /* The table itself — wide enough to fit all days */
+    #gantt-table {
+      display:inline-block;
+      min-width:100%;
+    }
+
+    /* ── ROWS ── */
+    .g-row {
+      display:flex;
+      min-width:max-content;
+    }
+
+    /* ── FROZEN LEFT CELL ──
+       Every row has a left cell that sticks to left:0
+    ── */
+    .g-left {
+      position:sticky;
+      left:0;
+      z-index:3;
+      flex-shrink:0;
+      width:var(--label-w);
+      min-width:var(--label-w);
       background:var(--surface);
       border-right:1px solid var(--border);
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:flex-end; padding:0 16px 10px;
-      font-size:11px; font-weight:600; letter-spacing:.08em;
-      text-transform:uppercase; color:var(--muted);
-      z-index:10;
     }
 
-    /* header strip — scrolls horizontally only, locked vertically */
-    #header-scroll {
-      grid-column:2; grid-row:1;
-      overflow-x:hidden; overflow-y:hidden;
-      border-bottom:1px solid var(--border);
-    }
-    #header-inner {
-      display:flex; flex-direction:column;
-      width:max-content;
+    /* ── FROZEN HEADER ROWS ──
+       Month row and day row stick to top
+    ── */
+    .g-row.row-month { position:sticky; top:0; z-index:5; }
+    .g-row.row-days  { position:sticky; top:var(--month-h); z-index:4; }
+
+    /* The corner cell of the header is both sticky left AND sticky top */
+    .g-row.row-month .g-left,
+    .g-row.row-days  .g-left {
+      z-index:6;
     }
 
-    /* month banner */
-    #month-strip { display:flex; height:var(--month-h); background:var(--surface); }
+    /* ── MONTH BANNER ── */
+    .g-left.corner-month {
+      height:var(--month-h);
+      border-bottom:1px solid var(--border);
+    }
+    .month-strip {
+      display:flex;
+      height:var(--month-h);
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+    }
     .month-block {
       display:flex; align-items:center; justify-content:center;
-      height:var(--month-h);
+      flex-shrink:0;
       border-left:3px solid var(--month-line);
       font-size:11px; font-weight:600; letter-spacing:.07em;
       text-transform:uppercase; color:var(--accent); overflow:hidden;
-      flex-shrink:0;
     }
     .month-block:first-child { border-left:none; }
 
-    /* day header */
-    #day-strip { display:flex; height:var(--header-h); background:var(--surface); }
+    /* ── DAY HEADER ── */
+    .g-left.corner-days {
+      height:var(--header-h);
+      display:flex; align-items:center; padding:0 16px;
+      font-size:11px; font-weight:600; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--muted);
+      border-bottom:1px solid var(--border);
+    }
+    .day-strip {
+      display:flex;
+      height:var(--header-h);
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+    }
     .day-cell {
       width:var(--cell-w); min-width:var(--cell-w); flex-shrink:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -130,49 +153,35 @@
     .day-cell .dom { font-size:15px; font-weight:600; font-family:'DM Mono',monospace; }
     .day-cell.today-col .dom { color:var(--accent); }
 
-    /* label column — scrolls vertically only */
-    #label-scroll {
-      grid-column:1; grid-row:2;
-      overflow-x:hidden; overflow-y:hidden;
-      border-right:1px solid var(--border);
-    }
-    #label-inner { width:var(--label-w); }
-
-    .row-label {
+    /* ── EVENT ROWS ── */
+    .g-left.ev-label {
       height:var(--row-h);
       display:flex; align-items:center; padding:0 16px; gap:10px;
-      border-bottom:1px solid var(--border);
       cursor:pointer; background:var(--bg);
+      border-bottom:1px solid var(--border);
       transition:background .1s;
     }
-    .row-label:hover { background:var(--surface); }
-    .row-label.selected { background:var(--surface); outline:2px solid var(--accent); outline-offset:-2px; }
-    .cat-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .ev-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
-    .ev-loc  { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
+    .g-left.ev-label:hover { background:var(--surface); }
+    .g-left.ev-label.selected { background:var(--surface); outline:2px solid var(--accent); outline-offset:-2px; }
+    .cat-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .ev-name  { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
+    .ev-loc   { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px; }
 
-    /* body — scrolls both x and y, synced with header/label */
-    #body-scroll {
-      grid-column:2; grid-row:2;
-      overflow:auto;
-    }
-    #body-inner { width:max-content; }
-
-    .body-row {
+    .ev-cells {
+      display:flex; flex:1; position:relative;
       height:var(--row-h);
-      display:flex; position:relative;
       border-bottom:1px solid var(--border);
     }
-    .body-cell {
+    .ev-cell {
       width:var(--cell-w); min-width:var(--cell-w); flex-shrink:0;
       border-right:1px solid var(--border); height:100%;
     }
-    .body-cell.month-start { border-left:3px solid var(--month-line); }
-    .body-cell.week-start  { border-left:3px solid var(--week-line); }
-    .body-cell.today-col   { background:var(--today-bg); }
-    .body-cell.weekend     { background:rgba(255,255,255,.015); }
+    .ev-cell.month-start { border-left:3px solid var(--month-line); }
+    .ev-cell.week-start  { border-left:3px solid var(--week-line); }
+    .ev-cell.today-col   { background:var(--today-bg); }
+    .ev-cell.weekend     { background:rgba(255,255,255,.015); }
 
-    /* bar */
+    /* ── BAR ── */
     .g-bar {
       position:absolute; top:7px; bottom:7px;
       border-radius:4px; display:flex; align-items:center;
@@ -184,7 +193,7 @@
     .g-bar.selected { box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent); z-index:3; }
     .bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; pointer-events:none; }
 
-    /* tooltip */
+    /* ── TOOLTIP ── */
     #tooltip {
       position:fixed; background:#22263a; border:1px solid var(--border);
       border-radius:8px; padding:12px 16px; font-size:13px; max-width:260px;
@@ -196,11 +205,10 @@
     #tooltip .tt-row   { color:var(--muted); font-size:12px; }
     #tooltip .tt-row span { color:var(--text); }
 
-    /* empty state */
+    /* ── EMPTY STATE ── */
     #empty {
-      grid-column:2; grid-row:2;
       display:none; flex-direction:column; align-items:center; justify-content:center;
-      gap:12px; color:var(--muted); font-size:14px; text-align:center; padding:40px;
+      height:100%; gap:12px; color:var(--muted); font-size:14px; text-align:center; padding:40px;
     }
     #empty .big { font-size:36px; }
 
@@ -215,7 +223,7 @@
      CONFIGURATION — replace both values
 ══════════════════════════════════════ -->
 <script>
-const SECRET_TOKEN = "jsschedule";  
+  const SECRET_TOKEN = "jsschedule";  
 
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
 </script>
@@ -235,12 +243,10 @@ const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaez
   <div id="cat-filters"></div>
 </div>
 
-<div id="gantt-outer">
-  <div id="corner">EVENT</div>
-  <div id="header-scroll"><div id="header-inner"><div id="month-strip"></div><div id="day-strip"></div></div></div>
-  <div id="label-scroll"><div id="label-inner"></div></div>
-  <div id="body-scroll"><div id="body-inner"></div></div>
-  <div id="empty"><div class="big">📭</div>No events in this range.<br/>Try adjusting the dates above.</div>
+<div id="gantt-wrap">
+  <div id="gantt-table">
+    <div id="empty"><div class="big">⏳</div>Loading your schedule…</div>
+  </div>
 </div>
 <div id="tooltip"></div>
 
@@ -257,124 +263,106 @@ const AUTO_PAL = ["#0e7490","#be185d","#15803d","#b45309","#6d28d9","#0f766e","#
 let autoIdx = 0;
 function catColor(cat) {
   const k = (cat||"").trim();
-  if (!k) { if (!CAT_COLORS["__"]) CAT_COLORS["__"] = {bg:"#4b5563",text:"#fff"}; return CAT_COLORS["__"]; }
-  if (!CAT_COLORS[k]) { CAT_COLORS[k] = {bg:AUTO_PAL[autoIdx%AUTO_PAL.length],text:"#fff"}; autoIdx++; }
+  if (!k) { if (!CAT_COLORS["__"]) CAT_COLORS["__"]={bg:"#4b5563",text:"#fff"}; return CAT_COLORS["__"]; }
+  if (!CAT_COLORS[k]) { CAT_COLORS[k]={bg:AUTO_PAL[autoIdx%AUTO_PAL.length],text:"#fff"}; autoIdx++; }
   return CAT_COLORS[k];
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────
 const CELL_W  = 48;
 const LABEL_W = 260;
+const ROW_H   = 44;
 const DOW     = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const POLL_MS = 10000;
 
 // ── STATE ────────────────────────────────────────────────────────
-let allEvents = [], activeCategories = new Set(), lastJSON = "";
+let allEvents=[], activeCategories=new Set(), lastJSON="";
 let rangeStart, rangeEnd;
 
 // ── DATE HELPERS ─────────────────────────────────────────────────
 function parseDate(v) {
   if (!v) return null;
-  if (v instanceof Date) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
-  const p = String(v).trim().split("/");
-  if (p.length===3) {
-    let y = parseInt(p[2]);
-    if (y<100) y += y<50?2000:1900;
-    return new Date(y, parseInt(p[0])-1, parseInt(p[1]));
-  }
+  if (v instanceof Date) return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  const p=String(v).trim().split("/");
+  if (p.length===3) { let y=parseInt(p[2]); if(y<100)y+=y<50?2000:1900; return new Date(y,parseInt(p[0])-1,parseInt(p[1])); }
   return null;
 }
-function addDays(d,n) { const r=new Date(d); r.setDate(r.getDate()+n); return r; }
-function sameDay(a,b) { return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
-function toVal(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function daysBetween(s,e) { const a=[]; let c=new Date(s); while(c<=e){a.push(new Date(c));c=addDays(c,1);} return a; }
-
-// ── SYNC SCROLL ──────────────────────────────────────────────────
-// body-scroll drives everything; header and label mirror it
-const bodyEl   = document.getElementById("body-scroll");
-const headerEl = document.getElementById("header-scroll");
-const labelEl  = document.getElementById("label-scroll");
-
-bodyEl.addEventListener("scroll", () => {
-  headerEl.scrollLeft = bodyEl.scrollLeft;
-  labelEl.scrollTop   = bodyEl.scrollTop;
-});
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function toVal(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function daysBetween(s,e){ const a=[]; let c=new Date(s); while(c<=e){a.push(new Date(c));c=addDays(c,1);} return a; }
 
 // ── RANGE ────────────────────────────────────────────────────────
-function initRange() {
-  const t = new Date();
-  rangeStart = new Date(t.getFullYear(), t.getMonth(), t.getDate());
-  rangeEnd   = new Date(t.getFullYear()+1, t.getMonth(), t.getDate());
-  document.getElementById("date-from").value = toVal(rangeStart);
-  document.getElementById("date-to").value   = toVal(rangeEnd);
+function initRange(){
+  const t=new Date();
+  rangeStart=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  rangeEnd  =new Date(t.getFullYear()+1,t.getMonth(),t.getDate());
+  document.getElementById("date-from").value=toVal(rangeStart);
+  document.getElementById("date-to").value  =toVal(rangeEnd);
 }
-function readRange() {
-  rangeStart = new Date(document.getElementById("date-from").value+"T00:00:00");
-  rangeEnd   = new Date(document.getElementById("date-to").value  +"T00:00:00");
+function readRange(){
+  rangeStart=new Date(document.getElementById("date-from").value+"T00:00:00");
+  rangeEnd  =new Date(document.getElementById("date-to").value  +"T00:00:00");
 }
-function shiftRange(n) {
+function shiftRange(n){
   readRange();
   rangeStart=addDays(rangeStart,n); rangeEnd=addDays(rangeEnd,n);
   document.getElementById("date-from").value=toVal(rangeStart);
   document.getElementById("date-to").value  =toVal(rangeEnd);
   render();
 }
+document.getElementById("date-from").addEventListener("change",()=>{readRange();render();});
+document.getElementById("date-to").addEventListener("change",  ()=>{readRange();render();});
 
-document.getElementById("btn-today").addEventListener("click", () => {
-  initRange();
-  render();
-  // scroll to today after render
-  const days  = daysBetween(rangeStart, rangeEnd);
-  const today = new Date();
-  const idx   = days.findIndex(d => sameDay(d, today));
-  if (idx !== -1) {
-    const visW = bodyEl.clientWidth;
-    bodyEl.scrollLeft = Math.max(0, idx * CELL_W - visW / 2 + CELL_W / 2);
-    bodyEl.scrollTop  = 0;
+document.getElementById("btn-today").addEventListener("click",()=>{
+  initRange(); render();
+  const wrap=document.getElementById("gantt-wrap");
+  const days=daysBetween(rangeStart,rangeEnd);
+  const idx=days.findIndex(d=>sameDay(d,new Date()));
+  if(idx!==-1){
+    wrap.scrollLeft=Math.max(0, idx*CELL_W - wrap.clientWidth/2 + CELL_W/2);
+    wrap.scrollTop=0;
   }
 });
 
-document.getElementById("date-from").addEventListener("change", ()=>{ readRange(); render(); });
-document.getElementById("date-to").addEventListener("change",   ()=>{ readRange(); render(); });
-
 // ── STATUS ───────────────────────────────────────────────────────
-function setStatus(type, msg) {
-  document.getElementById("status-text").textContent = msg;
-  document.getElementById("dot").style.background = type==="ok"?"#3ecf8e":type==="error"?"#ef4444":"#f59e0b";
+function setStatus(type,msg){
+  document.getElementById("status-text").textContent=msg;
+  document.getElementById("dot").style.background=type==="ok"?"#3ecf8e":type==="error"?"#ef4444":"#f59e0b";
 }
 
 // ── FETCH ────────────────────────────────────────────────────────
-async function fetchData() {
-  try {
-    const res  = await fetch(`${SCRIPT_URL}?token=${encodeURIComponent(SECRET_TOKEN)}`);
-    const json = await res.text();
-    if (json===lastJSON) return;
-    lastJSON = json;
-    const data = JSON.parse(json);
-    if (data.error) { setStatus("error","Auth failed — check token"); return; }
-    allEvents = data.map(r=>({
-      name:     r["Event"]    ||r["event"]    ||"",
+async function fetchData(){
+  try{
+    const res=await fetch(`${SCRIPT_URL}?token=${encodeURIComponent(SECRET_TOKEN)}`);
+    const json=await res.text();
+    if(json===lastJSON)return;
+    lastJSON=json;
+    const data=JSON.parse(json);
+    if(data.error){setStatus("error","Auth failed — check token");return;}
+    allEvents=data.map(r=>({
+      name:    r["Event"]   ||r["event"]   ||"",
       category:(r["Category"]||r["category"]||"").trim(),
-      location: r["Location"] ||r["location"] ||"",
-      notes:    r["Notes"]    ||r["notes"]    ||"",
-      start:    parseDate(r["Start"]||r["start"]),
-      end:      parseDate(r["End"]  ||r["end"]),
+      location:r["Location"]||r["location"]||"",
+      notes:   r["Notes"]  ||r["notes"]  ||"",
+      start:   parseDate(r["Start"]||r["start"]),
+      end:     parseDate(r["End"]  ||r["end"]),
     })).filter(e=>e.start&&e.end&&e.name);
     allEvents.sort((a,b)=>a.start-b.start);
     const cats=[...new Set(allEvents.map(e=>e.category||"__"))];
-    if (activeCategories.size===0) cats.forEach(c=>activeCategories.add(c));
+    if(activeCategories.size===0)cats.forEach(c=>activeCategories.add(c));
     buildPills(cats);
     render();
     setStatus("ok",`Updated ${new Date().toLocaleTimeString()}`);
-  } catch(err) {
+  }catch(err){
     setStatus("error","Fetch error — check URL");
     console.error(err);
   }
 }
 
 // ── PILLS ────────────────────────────────────────────────────────
-function buildPills(cats) {
+function buildPills(cats){
   const wrap=document.getElementById("cat-filters");
   wrap.innerHTML="";
   cats.forEach(cat=>{
@@ -385,36 +373,45 @@ function buildPills(cats) {
     p.style.background=col.bg+"33"; p.style.color=col.bg;
     p.style.borderColor=activeCategories.has(cat)?col.bg:"transparent";
     p.addEventListener("click",()=>{
-      if(activeCategories.has(cat)) activeCategories.delete(cat); else activeCategories.add(cat);
-      buildPills(cats); render();
+      if(activeCategories.has(cat))activeCategories.delete(cat);else activeCategories.add(cat);
+      buildPills(cats);render();
     });
     wrap.appendChild(p);
   });
 }
 
 // ── RENDER ───────────────────────────────────────────────────────
-function render() {
+function render(){
   readRange();
-  const days    = daysBetween(rangeStart, rangeEnd);
-  const today   = new Date();
-  const totalW  = days.length * CELL_W;
+  const days  = daysBetween(rangeStart,rangeEnd);
+  const today = new Date();
+  const table = document.getElementById("gantt-table");
+  const empty = document.getElementById("empty");
+  table.innerHTML="";
+  table.appendChild(empty);
 
-  const events = allEvents.filter(e=>{
+  const events=allEvents.filter(e=>{
     const k=e.category||"__";
     return activeCategories.has(k)&&e.start<=rangeEnd&&e.end>=rangeStart;
   });
 
-  // Show/hide empty state
-  document.getElementById("empty").style.display      = events.length===0?"flex":"none";
-  document.getElementById("body-scroll").style.display  = events.length===0?"none":"block";
-  document.getElementById("label-scroll").style.display = events.length===0?"none":"block";
-  document.getElementById("header-scroll").style.display= events.length===0?"none":"block";
-  document.getElementById("corner").style.display       = events.length===0?"none":"flex";
-  if (events.length===0) return;
+  if(events.length===0){
+    empty.style.display="flex";
+    empty.innerHTML=`<div class="big">📭</div>No events in this range.<br/>Try adjusting the dates above.`;
+    return;
+  }
+  empty.style.display="none";
 
-  // ── Month strip ──
-  const mStrip = document.getElementById("month-strip");
-  mStrip.innerHTML = "";
+  // ── MONTH ROW ──
+  const monthRow=document.createElement("div");
+  monthRow.className="g-row row-month";
+
+  const cornerMonth=document.createElement("div");
+  cornerMonth.className="g-left corner-month";
+  monthRow.appendChild(cornerMonth);
+
+  const mStrip=document.createElement("div");
+  mStrip.className="month-strip";
   const spans=[]; let cur={month:days[0].getMonth(),year:days[0].getFullYear(),count:0};
   days.forEach(d=>{
     if(d.getMonth()===cur.month&&d.getFullYear()===cur.year){cur.count++;}
@@ -427,47 +424,52 @@ function render() {
     b.textContent=sp.count>3?`${MONTHS[sp.month]} ${sp.year}`:MONTHS[sp.month].slice(0,3);
     mStrip.appendChild(b);
   });
+  monthRow.appendChild(mStrip);
+  table.appendChild(monthRow);
 
-  // ── Day strip ──
-  const dStrip = document.getElementById("day-strip");
-  dStrip.innerHTML = "";
+  // ── DAY ROW ──
+  const dayRow=document.createElement("div");
+  dayRow.className="g-row row-days";
+
+  const cornerDays=document.createElement("div");
+  cornerDays.className="g-left corner-days";
+  cornerDays.textContent="EVENT";
+  dayRow.appendChild(cornerDays);
+
+  const dStrip=document.createElement("div");
+  dStrip.className="day-strip";
   days.forEach(d=>{
-    const isMo = d.getDate()===1;
-    const isWk = d.getDay()===0;
-    const isTd = sameDay(d,today);
+    const isMo=d.getDate()===1, isWk=d.getDay()===0, isTd=sameDay(d,today);
     const c=document.createElement("div");
     c.className="day-cell"+(isTd?" today-col":"")+(isMo?" month-start":isWk?" week-start":"");
     c.innerHTML=`<span class="dow">${DOW[d.getDay()]}</span><span class="dom">${d.getDate()}</span>`;
     dStrip.appendChild(c);
   });
+  dayRow.appendChild(dStrip);
+  table.appendChild(dayRow);
 
-  // ── Labels ──
-  const labelInner = document.getElementById("label-inner");
-  labelInner.innerHTML = "";
-
-  // ── Body ──
-  const bodyInner = document.getElementById("body-inner");
-  bodyInner.innerHTML = "";
-  bodyInner.style.width = totalW+"px";
-
+  // ── EVENT ROWS ──
   let selBar=null, selLabel=null;
 
-  events.forEach(ev=>{
+  events.forEach((ev,evIdx)=>{
     const col=catColor(ev.category);
+    const row=document.createElement("div");
+    row.className="g-row";
 
-    // Label row
-    const lbl=document.createElement("div"); lbl.className="row-label";
+    // Frozen label cell
+    const lbl=document.createElement("div");
+    lbl.className="g-left ev-label";
     lbl.innerHTML=`<div class="cat-dot" style="background:${col.bg}"></div><div><div class="ev-name">${ev.name}</div><div class="ev-loc">${ev.location}</div></div>`;
-    labelInner.appendChild(lbl);
 
-    // Body row
-    const row=document.createElement("div"); row.className="body-row";
+    // Timeline cells + bar
+    const cells=document.createElement("div");
+    cells.className="ev-cells";
     days.forEach(d=>{
-      const isMo=d.getDate()===1; const isWk=d.getDay()===0;
-      const isTd=sameDay(d,today); const isWe=d.getDay()===0||d.getDay()===6;
+      const isMo=d.getDate()===1, isWk=d.getDay()===0;
+      const isTd=sameDay(d,today), isWe=d.getDay()===0||d.getDay()===6;
       const c=document.createElement("div");
-      c.className="body-cell"+(isTd?" today-col":isWe?" weekend":"")+(isMo?" month-start":isWk?" week-start":"");
-      row.appendChild(c);
+      c.className="ev-cell"+(isTd?" today-col":isWe?" weekend":"")+(isMo?" month-start":isWk?" week-start":"");
+      cells.appendChild(c);
     });
 
     // Bar
@@ -475,7 +477,7 @@ function render() {
     const ce=ev.end  >rangeEnd  ?rangeEnd  :ev.end;
     const si=days.findIndex(d=>sameDay(d,cs));
     const ei=days.findIndex(d=>sameDay(d,ce));
-    const s=si===-1?0:si; const e=ei===-1?days.length-1:ei;
+    const s=si===-1?0:si, e=ei===-1?days.length-1:ei;
     const bar=document.createElement("div"); bar.className="g-bar";
     bar.style.left      =(s*CELL_W+4)+"px";
     bar.style.width     =((e-s+1)*CELL_W-8)+"px";
@@ -485,8 +487,7 @@ function render() {
     bar.addEventListener("mouseenter",ev2=>showTT(ev2,ev,col));
     bar.addEventListener("mousemove", ev2=>moveTT(ev2));
     bar.addEventListener("mouseleave",hideTT);
-    row.appendChild(bar);
-    bodyInner.appendChild(row);
+    cells.appendChild(bar);
 
     // Snap on label click
     lbl.addEventListener("click",()=>{
@@ -495,17 +496,19 @@ function render() {
       bar.classList.add("selected"); lbl.classList.add("selected");
       selBar=bar; selLabel=lbl;
 
-      // Center bar horizontally
-      const barCenterX = s*CELL_W + (e-s+1)*CELL_W/2;
-      const visW       = bodyEl.clientWidth;
-      bodyEl.scrollLeft = Math.max(0, barCenterX - visW/2);
+      const wrap=document.getElementById("gantt-wrap");
+      const barCenterX=(s+(e-s)/2)*CELL_W+CELL_W/2;
+      const visW=wrap.clientWidth-LABEL_W;
+      wrap.scrollLeft=Math.max(0, barCenterX-visW/2);
 
-      // Center row vertically
-      const rowIdx  = events.indexOf(ev);
-      const rowTop  = rowIdx * parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-h"));
-      const visH    = bodyEl.clientHeight;
-      bodyEl.scrollTop = Math.max(0, rowTop - visH/2);
+      const rowTop=evIdx*ROW_H;
+      const visH=wrap.clientHeight;
+      wrap.scrollTop=Math.max(0, rowTop-visH/2+ROW_H/2);
     });
+
+    row.appendChild(lbl);
+    row.appendChild(cells);
+    table.appendChild(row);
   });
 }
 
@@ -522,7 +525,7 @@ function hideTT(){ tt.classList.remove("visible"); }
 // ── INIT ─────────────────────────────────────────────────────────
 initRange();
 fetchData();
-setInterval(fetchData, POLL_MS);
+setInterval(fetchData,POLL_MS);
 </script>
 </body>
 </html>
