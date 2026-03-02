@@ -126,7 +126,8 @@
       align-items:center; justify-content:center;
       border-right:1px solid var(--border); gap:2px;
     }
-    .g-day-header.week-start { border-left:3px solid var(--week-line); }
+    .g-day-header.month-start { border-left:3px solid var(--month-line); }
+    .g-day-header.week-start  { border-left:3px solid var(--week-line); }
     .g-day-header .dow { font-size:10px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
     .g-day-header .dom { font-size:15px; font-weight:600; font-family:var(--font-mono); }
     .g-day-header.today { background:var(--today); }
@@ -149,7 +150,8 @@
       height:var(--row-h); position:relative;
     }
     .g-cell { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--border); height:100%; }
-    .g-cell.week-start { border-left:3px solid var(--week-line); }
+    .g-cell.month-start { border-left:3px solid var(--month-line); }
+    .g-cell.week-start  { border-left:3px solid var(--week-line); }
     .g-cell.today   { background:var(--today); }
     .g-cell.weekend { background:rgba(255,255,255,.015); }
 
@@ -195,8 +197,7 @@
      CONFIGURATION  ← Replace both values below
 ══════════════════════════════════════════════════════════════ -->
 <script>
- const SECRET_TOKEN = "jsschedule";  
-
+const SECRET_TOKEN = "jsschedule";  
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
 </script>
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -392,9 +393,10 @@ function render(){
   const hLabel=document.createElement("div"); hLabel.className="g-header-label"; hLabel.textContent="EVENT"; gantt.appendChild(hLabel);
   const hDates=document.createElement("div"); hDates.className="g-header-dates"; hDates.style.gridColumn=`2 / span ${days.length}`;
   days.forEach(d=>{
-    const isSun=d.getDay()===0;
+    const isSun       = d.getDay()===0;
+    const isMonthStart = d.getDate()===1;
     const cell=document.createElement("div");
-    cell.className="g-day-header"+(isSameDay(d,today)?" today":"")+(isSun?" week-start":"");
+    cell.className="g-day-header"+(isSameDay(d,today)?" today":"")+(isMonthStart?" month-start":isSun?" week-start":"");
     cell.innerHTML=`<span class="dow">${DOW[d.getDay()]}</span><span class="dom">${d.getDate()}</span>`;
     hDates.appendChild(cell);
   });
@@ -405,13 +407,16 @@ function render(){
     const col=categoryColor(ev.category);
     const label=document.createElement("div"); label.className="g-row-label";
     label.innerHTML=`<div class="cat-dot" style="background:${col.bg}"></div><div><div class="g-event-name">${ev.name}</div><div class="g-event-loc">${ev.location}</div></div>`;
+    label.style.cursor="pointer";
+    label.addEventListener("click", ()=>snapToEvent(ev, bar, label));
     gantt.appendChild(label);
 
     const rowCells=document.createElement("div"); rowCells.className="g-row-cells"; rowCells.style.gridColumn=`2 / span ${days.length}`;
     days.forEach(d=>{
-      const isSun=d.getDay()===0;
+      const isSun        = d.getDay()===0;
+      const isMonthStart = d.getDate()===1;
       const cell=document.createElement("div");
-      cell.className="g-cell"+(isSameDay(d,today)?" today":(d.getDay()===0||d.getDay()===6)?" weekend":"")+(isSun?" week-start":"");
+      cell.className="g-cell"+(isSameDay(d,today)?" today":(d.getDay()===0||d.getDay()===6)?" weekend":"")+(isMonthStart?" month-start":isSun?" week-start":"");
       rowCells.appendChild(cell);
     });
 
@@ -430,7 +435,6 @@ function render(){
     bar.addEventListener("mouseenter",ev2=>showTooltip(ev2,ev,col));
     bar.addEventListener("mousemove", ev2=>moveTooltip(ev2));
     bar.addEventListener("mouseleave",hideTooltip);
-    bar.addEventListener("click", ev2=>{ ev2.stopPropagation(); snapToEvent(ev, bar, label); });
     rowCells.appendChild(bar);
     gantt.appendChild(rowCells);
   });
