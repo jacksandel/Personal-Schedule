@@ -101,10 +101,11 @@
     }
     .g-month-block {
       display:flex; align-items:center; justify-content:center;
-      border-right:3px solid var(--month-line);
+      border-left:3px solid var(--month-line);
       font-size:11px; font-weight:600; letter-spacing:.07em;
       text-transform:uppercase; color:var(--accent); overflow:hidden;
     }
+    .g-month-block:first-child { border-left:none; }
 
     /* Day header */
     .g-header-label {
@@ -474,12 +475,26 @@ function snapToEvent(ev, bar, label) {
   const idx = days.findIndex(d => isSameDay(d, snapDate));
   if (idx === -1) return;
 
-  // Scroll horizontally so the bar starts near the left edge (with a small offset)
-  const targetScrollLeft = labelW + idx * cellW - 80;
+  // Find the end index to get bar center
+  const snapEnd  = ev.end > rangeEnd ? rangeEnd : ev.end;
+  const eidx     = days.findIndex(d => isSameDay(d, snapEnd));
+  const endIdx   = eidx === -1 ? days.length - 1 : eidx;
+  const barCenterCol = (idx + endIdx) / 2;
+
+  // Center the bar horizontally in the visible gantt area (excluding label column)
+  const visibleW       = wrap.clientWidth - labelW;
+  const targetScrollLeft = labelW + barCenterCol * cellW - visibleW / 2;
   wrap.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: "smooth" });
 
-  // Scroll the label row into vertical view
-  label.scrollIntoView({ behavior: "smooth", block: "center" });
+  // Center the row vertically in the visible gantt area
+  const labelTop    = label.offsetTop;
+  const labelHeight = label.offsetHeight;
+  const visibleH    = wrap.clientHeight;
+  const targetScrollTop = labelTop + labelHeight / 2 - visibleH / 2;
+  wrap.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+
+  // Combined scroll (some browsers need both axes at once)
+  wrap.scrollTo({ left: Math.max(0, targetScrollLeft), top: Math.max(0, targetScrollTop), behavior: "smooth" });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
