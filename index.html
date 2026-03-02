@@ -14,7 +14,8 @@
       --muted:     #6b7080;
       --accent:    #4f8ef7;
       --today:     rgba(79,142,247,.15);
-      --week-line: rgba(255,255,255,.08);
+      --week-line: rgba(255,255,255,.35);
+      --month-line: rgba(79,142,247,.7);
       --row-h:     44px;
       --month-h:   28px;
       --header-h:  48px;
@@ -100,7 +101,7 @@
     }
     .g-month-block {
       display:flex; align-items:center; justify-content:center;
-      border-right:2px solid var(--border);
+      border-right:3px solid var(--month-line);
       font-size:11px; font-weight:600; letter-spacing:.07em;
       text-transform:uppercase; color:var(--accent); overflow:hidden;
     }
@@ -125,7 +126,7 @@
       align-items:center; justify-content:center;
       border-right:1px solid var(--border); gap:2px;
     }
-    .g-day-header.week-start { border-left:2px solid var(--week-line); }
+    .g-day-header.week-start { border-left:3px solid var(--week-line); }
     .g-day-header .dow { font-size:10px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
     .g-day-header .dom { font-size:15px; font-weight:600; font-family:var(--font-mono); }
     .g-day-header.today { background:var(--today); }
@@ -148,7 +149,7 @@
       height:var(--row-h); position:relative;
     }
     .g-cell { width:var(--cell-w); min-width:var(--cell-w); border-right:1px solid var(--border); height:100%; }
-    .g-cell.week-start { border-left:2px solid var(--week-line); }
+    .g-cell.week-start { border-left:3px solid var(--week-line); }
     .g-cell.today   { background:var(--today); }
     .g-cell.weekend { background:rgba(255,255,255,.015); }
 
@@ -157,9 +158,13 @@
       border-radius:4px; display:flex; align-items:center;
       padding:0 8px; font-size:11px; font-weight:500;
       white-space:nowrap; overflow:hidden; cursor:pointer;
-      transition:filter .15s,transform .1s; z-index:1;
+      transition:filter .15s,transform .1s,box-shadow .15s; z-index:1;
+      min-width:8px;
     }
     .g-bar:hover { filter:brightness(1.2); transform:scaleY(1.06); z-index:2; }
+    .g-bar.selected { box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--accent); z-index:3; filter:brightness(1.15); }
+    .g-row-label.selected { background:var(--surface); outline:2px solid var(--accent); outline-offset:-2px; }
+    .bar-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; width:100%; }
 
     #tooltip {
       position:fixed; background:#22263a;
@@ -190,7 +195,8 @@
      CONFIGURATION  ← Replace both values below
 ══════════════════════════════════════════════════════════════ -->
 <script>
-const SECRET_TOKEN = "jsschedule";  
+ const SECRET_TOKEN = "jsschedule";  
+
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
 </script>
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -418,10 +424,13 @@ function render(){
     const bar=document.createElement("div"); bar.className="g-bar";
     bar.style.left=barLeft+"px"; bar.style.width=barWidth+"px";
     bar.style.background=col.bg; bar.style.color=col.text;
-    bar.textContent=barWidth>60?ev.name:"";
+    // Always show name, clipped with ellipsis
+    const barLbl=document.createElement("span"); barLbl.className="bar-label"; barLbl.textContent=ev.name;
+    bar.appendChild(barLbl);
     bar.addEventListener("mouseenter",ev2=>showTooltip(ev2,ev,col));
     bar.addEventListener("mousemove", ev2=>moveTooltip(ev2));
     bar.addEventListener("mouseleave",hideTooltip);
+    bar.addEventListener("click", ev2=>{ ev2.stopPropagation(); snapToEvent(ev, bar, label); });
     rowCells.appendChild(bar);
     gantt.appendChild(rowCells);
   });
@@ -436,6 +445,38 @@ function showTooltip(e,ev,col){
 }
 function moveTooltip(e){ tt.style.left=Math.min(e.clientX+14,window.innerWidth-280)+"px"; tt.style.top=Math.min(e.clientY+14,window.innerHeight-160)+"px"; }
 function hideTooltip(){ tt.classList.remove("visible"); }
+
+// ── SNAP TO EVENT ─────────────────────────────────────────────────
+let selectedBar = null, selectedLabel = null;
+function snapToEvent(ev, bar, label) {
+  // Clear previous selection
+  if (selectedBar)   { selectedBar.classList.remove("selected"); }
+  if (selectedLabel) { selectedLabel.classList.remove("selected"); }
+
+  // Highlight new selection
+  bar.classList.add("selected");
+  label.classList.add("selected");
+  selectedBar   = bar;
+  selectedLabel = label;
+
+  // Scroll the gantt wrapper so the bar's start date is visible
+  const wrap   = document.getElementById("gantt-wrap");
+  const cellW  = 48;
+  const days   = datesBetween(rangeStart, rangeEnd);
+  const labelW = 260;
+
+  // Find which column the event starts on (clamped to range)
+  const snapDate = ev.start < rangeStart ? rangeStart : ev.start;
+  const idx = days.findIndex(d => isSameDay(d, snapDate));
+  if (idx === -1) return;
+
+  // Scroll horizontally so the bar starts near the left edge (with a small offset)
+  const targetScrollLeft = labelW + idx * cellW - 80;
+  wrap.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: "smooth" });
+
+  // Scroll the label row into vertical view
+  label.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 // ── INIT ──────────────────────────────────────────────────────────
 initRange();
