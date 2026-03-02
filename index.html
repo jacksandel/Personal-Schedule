@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Schedule Gantt</title>
+  <title>Jack's Schedule</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -17,7 +17,8 @@
       --week-line:  rgba(255,255,255,.35);
       --month-line: rgba(79,142,247,.8);
       --row-h:      44px;
-      --month-h:    28px;
+      --month-h:    42px;
+      --month-bg:   #12192e;
       --header-h:   48px;
       --label-w:    260px;
       --cell-w:     48px;
@@ -111,18 +112,19 @@
     .g-left.corner-month {
       height:var(--month-h);
       border-bottom:1px solid var(--border);
+      background:var(--month-bg);
     }
     .month-strip {
       display:flex;
       height:var(--month-h);
-      background:var(--surface);
-      border-bottom:1px solid var(--border);
+      background:var(--month-bg);
+      border-bottom:2px solid var(--month-line);
     }
     .month-block {
       display:flex; align-items:center; justify-content:center;
       flex-shrink:0;
       border-left:3px solid var(--month-line);
-      font-size:11px; font-weight:600; letter-spacing:.07em;
+      font-size:13px; font-weight:700; letter-spacing:.1em;
       text-transform:uppercase; color:var(--accent); overflow:hidden;
     }
     .month-block:first-child { border-left:none; }
@@ -230,7 +232,7 @@ const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaez
 <!-- ══════════════════════════════════════ -->
 
 <div id="topbar">
-  <h1>📅 Schedule</h1>
+  <h1>🗓 Jack's Schedule</h1>
   <div id="status"><div id="dot"></div><span id="status-text">Connecting…</span></div>
 </div>
 
@@ -421,7 +423,18 @@ function render(){
   spans.forEach(sp=>{
     const b=document.createElement("div"); b.className="month-block";
     b.style.width=b.style.minWidth=(sp.count*CELL_W)+"px";
-    b.textContent=sp.count>3?`${MONTHS[sp.month]} ${sp.year}`:MONTHS[sp.month].slice(0,3);
+    const fullLabel=`${MONTHS[sp.month]} ${sp.year}`;
+    const shortLabel=MONTHS[sp.month].slice(0,3);
+    // For wide spans, repeat the label so it's always visible when scrolled
+    if(sp.count>14){
+      b.style.backgroundImage=`repeating-linear-gradient(90deg, transparent 0px, transparent ${CELL_W*14-1}px, transparent ${CELL_W*14}px)`;
+      b.style.position="relative";
+      b.style.overflow="hidden";
+      // Use a CSS trick: display as sticky text inside the block
+      b.innerHTML=`<span style="position:sticky;left:${LABEL_W}px;padding:0 16px;white-space:nowrap;">${fullLabel}</span>`;
+    } else {
+      b.textContent=sp.count>3?fullLabel:shortLabel;
+    }
     mStrip.appendChild(b);
   });
   monthRow.appendChild(mStrip);
