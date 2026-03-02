@@ -48,18 +48,18 @@
     .pill.active { opacity:1; }
 
     /* ── GANTT WRAP ── */
-    #gantt-wrap { flex:1; overflow:auto; position:relative; }
+    #gantt-wrap { flex:1; overflow:auto; position:relative; min-height:0; }
     #gantt { display:grid; min-width:max-content; }
 
     /* ── MONTH BANNER ── */
     .g-month-corner { position:sticky; top:0; left:0; z-index:6; background:var(--surface); height:var(--month-h); border-right:1px solid var(--border); border-bottom:1px solid var(--border); }
-    .g-month-strip  { display:flex; position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--border); height:var(--month-h); }
+    .g-month-strip  { position:sticky; top:0; z-index:5; display:flex; background:var(--surface); border-bottom:1px solid var(--border); height:var(--month-h); }
     .g-month-block  { display:flex; align-items:center; justify-content:center; border-left:3px solid var(--month-line); font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--accent); overflow:hidden; }
     .g-month-block:first-child { border-left:none; }
 
     /* ── DAY HEADER ── */
     .g-header-label { position:sticky; top:var(--month-h); left:0; z-index:5; background:var(--surface); height:var(--header-h); border-right:1px solid var(--border); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 16px; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-    .g-header-dates { display:flex; position:sticky; top:var(--month-h); z-index:4; background:var(--surface); border-bottom:1px solid var(--border); height:var(--header-h); }
+    .g-header-dates { position:sticky; top:var(--month-h); z-index:4; display:flex; background:var(--surface); border-bottom:1px solid var(--border); height:var(--header-h); }
     .g-day-header { width:var(--cell-w); min-width:var(--cell-w); display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid var(--border); gap:2px; }
     .g-day-header.month-start { border-left:3px solid var(--month-line); }
     .g-day-header.week-start  { border-left:3px solid var(--week-line); }
@@ -110,7 +110,8 @@
      CONFIGURATION — replace both values below
 ══════════════════════════════════════════════ -->
 <script>
-const SECRET_TOKEN = "jsschedule";  
+  const SECRET_TOKEN = "jsschedule";  
+
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
 </script>
 <!-- ══════════════════════════════════════════════ -->
@@ -247,17 +248,17 @@ function shiftRange(days) {
 function goToday() {
   initRange();
   render();
-  // Use requestAnimationFrame to wait for DOM paint before scrolling
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const wrap   = document.getElementById("gantt-wrap");
-      const days   = datesBetween(rangeStart, rangeEnd);
-      const today  = new Date();
-      const idx    = days.findIndex(d => isSameDay(d, today));
+      const wrap    = document.getElementById("gantt-wrap");
+      const days    = datesBetween(rangeStart, rangeEnd);
+      const today   = new Date();
+      const idx     = days.findIndex(d => isSameDay(d, today));
       if (idx === -1) return;
       const visibleW = wrap.clientWidth - LABEL_W;
-      wrap.scrollTo({ left: Math.max(0, LABEL_W + idx * CELL_W - visibleW / 2), behavior: "smooth" });
-      wrap.scrollTo({ top: 0, behavior: "smooth" });
+      const left     = Math.max(0, LABEL_W + idx * CELL_W - visibleW / 2);
+      // Single scrollTo with both axes
+      wrap.scrollTo({ left, top: 0, behavior: "smooth" });
     });
   });
 }
