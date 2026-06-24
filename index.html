@@ -173,7 +173,25 @@
       display:flex; flex:1; position:relative;
       height:var(--row-h);
       border-bottom:1px solid var(--border);
+      overflow:hidden;
     }
+
+    /* ── TIMESCALE SLIDER ── */
+    .slider-wrap { display:flex; align-items:center; gap:8px; }
+    .slider-wrap label { font-size:12px; color:var(--muted); white-space:nowrap; }
+    #zoom-slider {
+      -webkit-appearance:none; appearance:none;
+      width:120px; height:4px;
+      background:var(--border); border-radius:2px; outline:none; cursor:pointer;
+    }
+    #zoom-slider::-webkit-slider-thumb {
+      -webkit-appearance:none; appearance:none;
+      width:14px; height:14px; border-radius:50%;
+      background:var(--accent); cursor:pointer;
+      transition:background .15s;
+    }
+    #zoom-slider::-webkit-slider-thumb:hover { background:#3a7de8; }
+    #zoom-label { font-size:11px; font-family:'DM Mono',monospace; color:var(--muted); min-width:28px; }
     .ev-cell {
       width:var(--cell-w); min-width:var(--cell-w); flex-shrink:0;
       border-right:1px solid var(--border); height:100%;
@@ -225,9 +243,8 @@
      CONFIGURATION — replace both values
 ══════════════════════════════════════ -->
 <script>
-  const SECRET_TOKEN = "jsschedule";  
-
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaezKrgHZU6sGno07E6_dqVxbSem5TNqq0ZfdKfYS58Lst644XB9Nw/exec";
+  const SCRIPT_URL   = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+  const SECRET_TOKEN = "PASTE_YOUR_SECRET_TOKEN_HERE";
 </script>
 <!-- ══════════════════════════════════════ -->
 
@@ -242,6 +259,11 @@ const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwn1u9aSHJ5jspUhaez
   <button class="btn" onclick="shiftRange(-7)">◀ Week</button>
   <button class="btn" onclick="shiftRange(7)">Week ▶</button>
   <button class="btn primary" id="btn-today">Today</button>
+  <div class="slider-wrap">
+    <label>Zoom</label>
+    <input type="range" id="zoom-slider" min="1" max="10" value="5" step="1"/>
+    <span id="zoom-label">1x</span>
+  </div>
   <div id="cat-filters"></div>
 </div>
 
@@ -271,12 +293,32 @@ function catColor(cat) {
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────
-const CELL_W  = 48;
 const LABEL_W = 260;
 const ROW_H   = 44;
 const DOW     = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const POLL_MS = 10000;
+
+// Zoom levels: step 1-10 maps to cell widths
+const ZOOM_STEPS = [8, 12, 18, 24, 32, 48, 64, 80, 96, 120];
+const ZOOM_LABELS= ["0.2x","0.3x","0.4x","0.5x","0.7x","1x","1.3x","1.7x","2x","2.5x"];
+let CELL_W = 48; // default (step 6 = index 5)
+
+function getCellW(){ return CELL_W; }
+
+// Zoom slider
+const zoomSlider = document.getElementById("zoom-slider");
+const zoomLabel  = document.getElementById("zoom-label");
+zoomSlider.value = 6; // default to 1x
+zoomLabel.textContent = "1x";
+zoomSlider.addEventListener("input", () => {
+  const idx = parseInt(zoomSlider.value) - 1;
+  CELL_W = ZOOM_STEPS[idx];
+  zoomLabel.textContent = ZOOM_LABELS[idx];
+  // Update CSS variable so day/cell widths adjust
+  document.documentElement.style.setProperty("--cell-w", CELL_W + "px");
+  render();
+});
 
 // ── STATE ────────────────────────────────────────────────────────
 let allEvents=[], activeCategories=new Set(), lastJSON="";
@@ -455,7 +497,9 @@ function render(){
     const isMo=d.getDate()===1, isWk=d.getDay()===0, isTd=sameDay(d,today);
     const c=document.createElement("div");
     c.className="day-cell"+(isTd?" today-col":"")+(isMo?" month-start":isWk?" week-start":"");
-    c.innerHTML=`<span class="dow">${DOW[d.getDay()]}</span><span class="dom">${d.getDate()}</span>`;
+    if(CELL_W>=24){
+      c.innerHTML=`${CELL_W>=40?`<span class="dow">${DOW[d.getDay()]}</span>`:""}<span class="dom">${d.getDate()}</span>`;
+    }
     dStrip.appendChild(c);
   });
   dayRow.appendChild(dStrip);
