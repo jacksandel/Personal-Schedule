@@ -175,7 +175,7 @@
       display:flex; align-items:center; justify-content:center;
       width:80px; min-width:80px; height:100%;
       border-right:1px solid var(--border);
-      font-size:11px; font-family:'DM Mono',monospace; color:var(--muted);
+      font-size:11px; font-family:'DM Mono',monospace; color:#fff;
       flex-direction:column; gap:1px;
     }
     .ev-label-date:last-child { border-right:none; }
@@ -549,7 +549,7 @@ function render(){
     // Frozen label cell
     const lbl=document.createElement("div");
     lbl.className="g-left ev-label";
-    const fmt=d=>d?d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"}):"—";
+    const fmt=d=>d?d.toLocaleDateString("en-US",{month:"numeric",day:"numeric",year:"2-digit"}):"—";
     lbl.innerHTML=`
       <div class="ev-label-name">
         <div class="cat-dot" style="background:${col.bg}"></div>
