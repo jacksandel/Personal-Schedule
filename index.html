@@ -132,10 +132,9 @@
     /* ── DAY HEADER ── */
     .g-left.corner-days {
       height:var(--header-h);
-      display:flex; align-items:center; padding:0 16px;
-      font-size:11px; font-weight:600; letter-spacing:.08em;
-      text-transform:uppercase; color:var(--muted);
+      display:flex; align-items:stretch;
       border-bottom:1px solid var(--border);
+      padding:0;
     }
     .day-strip {
       display:flex;
@@ -183,7 +182,7 @@
 
     /* column headers in the corner */
     .corner-days-inner {
-      display:flex; align-items:stretch; height:100%; width:100%;
+      display:flex; align-items:stretch; height:100%; width:100%; flex:1;
     }
     .corner-col-name {
       flex:1; display:flex; align-items:center; padding:0 12px;
