@@ -62,6 +62,20 @@
       font-family:'DM Sans',sans-serif;
     }
     #btn-collapse:hover { background:#3a7de8; }
+
+    #btn-cols {
+      background:var(--accent); border:none; color:#fff;
+      border-radius:6px; padding:6px 14px; font-size:13px;
+      font-weight:500; cursor:pointer; letter-spacing:.02em;
+      transition:background .15s;
+      font-family:'DM Sans',sans-serif;
+    }
+    #btn-cols:hover { background:#3a7de8; }
+
+    /* When columns are hidden, shrink label width to just the name */
+    .cols-hidden { --label-w: 200px; }
+    .cols-hidden .ev-label-date,
+    .cols-hidden .corner-col-date { display:none; }
     #controls label { font-size:12px; color:var(--muted); }
     #controls input[type=date] {
       background:var(--surface); border:1px solid var(--border); color:var(--text);
@@ -298,8 +312,9 @@
 
 <div id="topbar">
   <h1>🗓 Jack's Schedule</h1>
-  <div style="display:flex;align-items:center;gap:12px;">
+  <div style="display:flex;align-items:center;gap:8px;">
     <button id="btn-collapse" title="Toggle controls">Hide Controls</button>
+    <button id="btn-cols" title="Toggle columns">Hide Columns</button>
     <div id="status"><div id="dot"></div><span id="status-text">Connecting…</span></div>
   </div>
 </div>
@@ -651,6 +666,18 @@ collapseBtn.addEventListener("click", () => {
   ganttWrap.classList.toggle("gantt-headers-hidden", collapsed);
   collapseBtn.textContent = collapsed ? "Show Controls" : "Hide Controls";
   collapseBtn.title = collapsed ? "Show controls and headers" : "Hide controls and headers";
+});
+
+// ── HIDE COLUMNS TOGGLE ───────────────────────────────────────────
+const colsBtn  = document.getElementById("btn-cols");
+const ganttTbl = document.getElementById("gantt-table");
+let colsHidden = false;
+colsBtn.addEventListener("click", () => {
+  colsHidden = !colsHidden;
+  ganttTbl.classList.toggle("cols-hidden", colsHidden);
+  // Also update the JS LABEL_W so snap-to calculations stay accurate
+  colsBtn.textContent = colsHidden ? "Show Columns" : "Hide Columns";
+  colsBtn.title = colsHidden ? "Show start and end columns" : "Hide start and end columns";
 });
 
 // ── INIT ─────────────────────────────────────────────────────────
