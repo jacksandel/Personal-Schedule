@@ -34,10 +34,10 @@
     /* ── TOP BAR ── */
     #topbar {
       flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
-      padding:0 28px; height:58px;
+      padding:0 16px; height:38px;
       border-bottom:1px solid var(--border); background:var(--surface);
     }
-    #topbar h1 { font-size:16px; font-weight:600; }
+    #topbar h1 { font-size:13px; font-weight:600; }
     #status { font-size:12px; font-family:'DM Mono',monospace; color:var(--muted); display:flex; align-items:center; gap:8px; }
     #dot { width:7px; height:7px; border-radius:50%; background:#3ecf8e; animation:pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -50,6 +50,8 @@
       overflow:hidden;
     }
     #controls.collapsed { height:0; padding:0; opacity:0; pointer-events:none; border-bottom:none; }
+    .gantt-headers-hidden .row-month,
+    .gantt-headers-hidden .row-days { display:none; }
 
     /* collapse toggle button — always visible in topbar */
     #btn-collapse {
@@ -641,12 +643,14 @@ function hideTT(){ tt.classList.remove("visible"); }
 // ── COLLAPSE TOGGLE ───────────────────────────────────────────────
 const collapseBtn = document.getElementById("btn-collapse");
 const controlsEl  = document.getElementById("controls");
+const ganttWrap   = document.getElementById("gantt-wrap");
 let collapsed = false;
 collapseBtn.addEventListener("click", () => {
   collapsed = !collapsed;
   controlsEl.classList.toggle("collapsed", collapsed);
+  ganttWrap.classList.toggle("gantt-headers-hidden", collapsed);
   collapseBtn.textContent = collapsed ? "Show Controls" : "Hide Controls";
-  collapseBtn.title = collapsed ? "Expand controls" : "Collapse controls";
+  collapseBtn.title = collapsed ? "Show controls and headers" : "Hide controls and headers";
 });
 
 // ── INIT ─────────────────────────────────────────────────────────
