@@ -38,6 +38,13 @@
       border-bottom:1px solid var(--border); background:var(--surface);
     }
     #topbar h1 { font-size:13px; font-weight:600; }
+    #btn-update {
+      background:var(--accent); border:none; color:#fff;
+      border-radius:6px; padding:6px 14px; font-size:13px; font-weight:500;
+      cursor:pointer; text-decoration:none; font-family:'DM Sans',sans-serif;
+      transition:background .15s;
+    }
+    #btn-update:hover { background:#3a7de8; }
     #status { font-size:12px; font-family:'DM Mono',monospace; color:var(--muted); display:flex; align-items:center; gap:8px; }
     #dot { width:7px; height:7px; border-radius:50%; background:#3ecf8e; animation:pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -319,7 +326,10 @@
 <!-- ══════════════════════════════════════ -->
 
 <div id="topbar">
-  <h1>🗓 Jack's Schedule</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <h1>🗓 Jack's Schedule</h1>
+    <a href="https://docs.google.com/spreadsheets/d/1NgoR51EN5qGokmV1hRiJ0leurjOnV_zrqGhvUxAZJcs/edit?gid=0#gid=0" target="_blank" id="btn-update">Update Data</a>
+  </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <button id="btn-collapse" title="Toggle controls">Hide Controls</button>
     <button id="btn-cols" title="Toggle columns">Hide Columns</button>
