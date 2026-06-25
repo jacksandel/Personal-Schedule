@@ -72,10 +72,9 @@
     }
     #btn-cols:hover { background:#3a7de8; }
 
-    /* When columns are hidden, shrink label width to just the name */
-    .cols-hidden { --label-w: 200px; }
-    .cols-hidden .ev-label-date,
-    .cols-hidden .corner-col-date { display:none; }
+    /* When columns are hidden, hide the entire left label panel */
+    .cols-hidden { --label-w: 0px; }
+    .cols-hidden .g-left { display:none; }
     #controls label { font-size:12px; color:var(--muted); }
     #controls input[type=date] {
       background:var(--surface); border:1px solid var(--border); color:var(--text);
@@ -239,11 +238,10 @@
     }
 
     /* ── TIMESCALE SLIDER ── */
-    .slider-wrap { display:flex; align-items:center; gap:8px; }
-    .slider-wrap label { font-size:12px; color:var(--muted); white-space:nowrap; }
+    .slider-wrap { display:flex; align-items:center; gap:6px; }
     #zoom-slider {
       -webkit-appearance:none; appearance:none;
-      width:120px; height:4px;
+      width:100px; height:4px;
       background:var(--border); border-radius:2px; outline:none; cursor:pointer;
     }
     #zoom-slider::-webkit-slider-thumb {
@@ -253,7 +251,6 @@
       transition:background .15s;
     }
     #zoom-slider::-webkit-slider-thumb:hover { background:#3a7de8; }
-    #zoom-label { font-size:11px; font-family:'DM Mono',monospace; color:var(--muted); min-width:28px; }
     .ev-cell {
       width:var(--cell-w); min-width:var(--cell-w); flex-shrink:0;
       border-right:1px solid var(--border); height:100%;
@@ -326,9 +323,9 @@
   <button class="btn" onclick="shiftRange(7)">Week ▶</button>
   <button class="btn primary" id="btn-today">Today</button>
   <div class="slider-wrap">
-    <label>Zoom</label>
-    <input type="range" id="zoom-slider" min="1" max="10" value="5" step="1"/>
-    <span id="zoom-label">1x</span>
+    <button class="btn" id="btn-zoom-out">−</button>
+    <input type="range" id="zoom-slider" min="1" max="10" value="6" step="1"/>
+    <button class="btn" id="btn-zoom-in">+</button>
   </div>
   <div id="cat-filters"></div>
 </div>
@@ -370,20 +367,25 @@ const ZOOM_STEPS = [8, 12, 18, 24, 32, 48, 64, 80, 96, 120];
 const ZOOM_LABELS= ["0.2x","0.3x","0.4x","0.5x","0.7x","1x","1.3x","1.7x","2x","2.5x"];
 let CELL_W = 48; // default (step 6 = index 5)
 
-function getCellW(){ return CELL_W; }
+function applyZoom(idx) {
+  CELL_W = ZOOM_STEPS[idx];
+  document.documentElement.style.setProperty("--cell-w", CELL_W + "px");
+  render();
+}
 
 // Zoom slider
 const zoomSlider = document.getElementById("zoom-slider");
-const zoomLabel  = document.getElementById("zoom-label");
-zoomSlider.value = 6; // default to 1x
-zoomLabel.textContent = "1x";
-zoomSlider.addEventListener("input", () => {
-  const idx = parseInt(zoomSlider.value) - 1;
-  CELL_W = ZOOM_STEPS[idx];
-  zoomLabel.textContent = ZOOM_LABELS[idx];
-  // Update CSS variable so day/cell widths adjust
-  document.documentElement.style.setProperty("--cell-w", CELL_W + "px");
-  render();
+zoomSlider.value = 6;
+zoomSlider.addEventListener("input", () => applyZoom(parseInt(zoomSlider.value) - 1));
+
+// +/- buttons
+document.getElementById("btn-zoom-out").addEventListener("click", () => {
+  const v = Math.max(1, parseInt(zoomSlider.value) - 1);
+  zoomSlider.value = v; applyZoom(v - 1);
+});
+document.getElementById("btn-zoom-in").addEventListener("click", () => {
+  const v = Math.min(10, parseInt(zoomSlider.value) + 1);
+  zoomSlider.value = v; applyZoom(v - 1);
 });
 
 // ── STATE ────────────────────────────────────────────────────────
