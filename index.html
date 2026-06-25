@@ -72,9 +72,20 @@
     }
     #btn-cols:hover { background:#3a7de8; }
 
-    /* When columns are hidden, hide the entire left label panel */
+    /* When columns are hidden, collapse entire left panel with no leakage */
     .cols-hidden { --label-w: 0px; }
-    .cols-hidden .g-left { display:none; }
+    .cols-hidden .g-left {
+      width:0 !important;
+      min-width:0 !important;
+      max-width:0 !important;
+      padding:0 !important;
+      margin:0 !important;
+      border:none !important;
+      overflow:hidden !important;
+      flex:0 0 0px !important;
+      visibility:hidden !important;
+      position:relative !important;
+    }
     #controls label { font-size:12px; color:var(--muted); }
     #controls input[type=date] {
       background:var(--surface); border:1px solid var(--border); color:var(--text);
@@ -672,12 +683,11 @@ collapseBtn.addEventListener("click", () => {
 
 // ── HIDE COLUMNS TOGGLE ───────────────────────────────────────────
 const colsBtn  = document.getElementById("btn-cols");
-const ganttTbl = document.getElementById("gantt-table");
+const ganttTbl = document.getElementById("gantt-wrap");
 let colsHidden = false;
 colsBtn.addEventListener("click", () => {
   colsHidden = !colsHidden;
   ganttTbl.classList.toggle("cols-hidden", colsHidden);
-  // Also update the JS LABEL_W so snap-to calculations stay accurate
   colsBtn.textContent = colsHidden ? "Show Columns" : "Hide Columns";
   colsBtn.title = colsHidden ? "Show start and end columns" : "Hide start and end columns";
 });
